@@ -1,67 +1,85 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tg = window.Telegram.WebApp;
     tg.ready();
-    tg.expand(); // Make the web app full height
+    tg.expand();
 
-    const gameList = document.getElementById('game-list');
-    const refreshBtn = document.getElementById('refresh-btn');
+    // Views
+    const lobbyView = document.getElementById('lobby-view');
+    const createGameView = document.getElementById('create-game-view');
+    const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
 
-    function fetchGames() {
-        gameList.innerHTML = '<p>Loading open games...</p>';
-        fetch('/api/games')
-            .then(response => response.json())
-            .then(data => {
-                gameList.innerHTML = ''; // Clear loading text
-                if (data.games && data.games.length > 0) {
-                    data.games.forEach(game => {
-                        const card = document.createElement('div');
-                        card.className = 'game-card';
-                        card.innerHTML = `
-                            <div class="card-top">
-                                <div class="player-info">
-                                    <img src="${game.creator_avatar}" alt="Avatar">
-                                    <div>
-                                        <div class="player-name">${game.creator_name}</div>
-                                        <div class="game-mode">👑 1 Token Home</div>
-                                    </div>
-                                </div>
-                                <div class="game-stats">
-                                    <span>Stake</span>
-                                    <span>${game.stake} ETB</span>
-                                </div>
-                                <div class="game-stats">
-                                    <span>Prize</span>
-                                    <span class="prize">${game.prize} ETB</span>
-                                </div>
-                            </div>
-                            <div class="card-bottom">
-                                <button class="join-btn" data-game-id="${game.id}">Join</button>
-                            </div>
-                        `;
-                        gameList.appendChild(card);
-                    });
-                } else {
-                    gameList.innerHTML = '<p>No open games found. Create one!</p>';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching games:', error);
-                gameList.innerHTML = '<p>Could not load games. Please try again.</p>';
-            });
-    }
+    // Create Game Elements
+    const customStakeInput = document.getElementById('custom-stake-input');
+    const showConfirmBtn = document.getElementById('show-confirm-btn');
 
-    // Handle clicks on "Join" buttons
-    gameList.addEventListener('click', event => {
-        if (event.target.classList.contains('join-btn')) {
-            const gameId = event.target.getAttribute('data-game-id');
-            // This sends a message back to your bot with the game ID
-            tg.sendData(`join_game_${gameId}`);
-            tg.close(); // Close the web app after clicking
+    // Modal Elements
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+    const confirmCreateBtn = document.getElementById('confirm-create-btn');
+
+    // Summary Elements
+    const summaryStake = document.getElementById('summary-stake');
+    const summaryWin = document.getElementById('summary-win');
+    const summaryPrize = document.getElementById('summary-prize');
+
+    let selectedStake = 50;
+    let selectedWin = 2;
+
+    // ... (All the other functions like showView and fetchGames remain the same)
+
+    // --- Event Listeners ---
+
+    // When custom input is used, deselect preset buttons
+    customStakeInput.addEventListener('input', () => {
+        if (customStakeInput.value) {
+            const activeButton = stakeOptions.querySelector('.active');
+            if (activeButton) activeButton.classList.remove('active');
+            selectedStake = customStakeInput.value;
         }
     });
     
-    refreshBtn.addEventListener('click', fetchGames);
+    // When preset is clicked, clear custom input
+    stakeOptions.addEventListener('click', e => {
+        if (e.target.classList.contains('option-btn')) {
+            customStakeInput.value = '';
+        }
+    });
 
-    // Initial load of games
-    fetchGames();
+    // Show the confirmation modal
+    showConfirmBtn.addEventListener('click', () => {
+        // Use custom stake if provided, otherwise use the selected preset
+        const stakeValue = customStakeInput.value || selectedStake;
+        
+        // Validate
+        if (!stakeValue || isNaN(stakeValue) || stakeValue <= 0) {
+            tg.showAlert('Please enter a valid stake amount.');
+            return;
+        }
+        
+        selectedStake = parseInt(stakeValue);
+        const prizeValue = (selectedStake * 2 * 0.9).toFixed(2); // Calculate prize with 10% commission
+
+        // Populate summary
+        summaryStake.textContent = `${selectedStake} ETB`;
+        summaryWin.textContent = `${selectedWin} Piece${selectedWin > 1 ? 's' : ''}`;
+        summaryPrize.textContent = `${prizeValue} ETB`;
+        
+        confirmModalOverlay.classList.remove('hidden');
+    });
+
+    // Hide the confirmation modal
+    function hideModal() {
+        confirmModalOverlay.classList.add('hidden');
+    }
+    closeModalBtn.addEventListener('click', hideModal);
+    cancelConfirmBtn.addEventListener('click', hideModal);
+
+    // Send the final data to the bot
+    confirmCreateBtn.addEventListener('click', () => {
+        const data = `create_game_stake_${selectedStake}_win_${selectedWin}`;
+        tg.sendData(data);
+        tg.close();
+    });
+
+    // ... (The rest of your event listeners for newGameBtn, cancelCreateBtn, winOptions, etc.)
 });
