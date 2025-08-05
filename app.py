@@ -1,4 +1,4 @@
-# app.py (Final, Perfected Version)
+# app.py (The Final, Complete, and Perfected Version)
 
 import logging
 import os
@@ -11,13 +11,13 @@ from telegram import Update
 from telegram.ext import Application
 from telegram.error import RetryAfter
 
+# --- Make sure all necessary components are imported ---
 from bot.handlers import setup_handlers
+from database_models.manager import get_db_session, games, users
+from sqlalchemy import select
 
 # --- 1. Setup & Configuration ---
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -25,21 +25,14 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 # --- 2. Global Application Instances ---
-# These are initialized here so they can be used in the lifespan and endpoints.
 bot_app: Application | None = None
 
-# We define the lifespan function before creating the app instance that uses it.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Handles critical startup and shutdown events for the application.
-    """
+    """Handles critical startup and shutdown events for the application."""
     logger.info("Application startup...")
     if bot_app:
-        # Initialize the bot's internal state
         await bot_app.initialize()
-        
-        # Set the webhook to connect with Telegram
         if WEBHOOK_URL:
             webhook_full_url = f"{WEBHOOK_URL}/api/telegram/webhook"
             try:
@@ -56,14 +49,12 @@ async def lifespan(app: FastAPI):
     
     logger.info("Application shutdown...")
     if bot_app:
-        # Gracefully shut down the bot's components
         await bot_app.shutdown()
 
 
 # --- 3. Main FastAPI Application Initialization ---
 app = FastAPI(title="Yeab Game Zone API", lifespan=lifespan)
 
-# Initialize the bot application if the token exists
 if not TELEGRAM_BOT_TOKEN:
     logger.error("FATAL: TELEGRAM_BOT_TOKEN is not set! Bot will be disabled.")
 else:
@@ -87,15 +78,29 @@ async def telegram_webhook(request: Request):
         logger.error(f"Error processing Telegram update: {e}", exc_info=True)
         return Response(status_code=500)
 
+# --- THIS IS THE CRITICAL ENDPOINT THAT WAS MISSING ---
 @app.get("/api/games")
 async def get_open_games():
     """Endpoint for the web app to fetch open game lobbies."""
-    # TODO: Replace this with a real database query
-    dummy_games = [
-        {"id": 123, "creator_name": "Yeab", "creator_avatar": "https://i.pravatar.cc/40?u=123", "stake": 50, "prize": 90},
-        {"id": 124, "creator_name": "John D.", "creator_avatar": "https://i.pravatar.cc/40?u=124", "stake": 20, "prize": 36},
-    ]
-    return {"games": dummy_games}
+    live_games = []
+    try:
+        async with get_db_session() as session:
+            stmt = select(games.c.id, games.c.stake, games.c.pot, users.c.username).\
+                   join(users, games.c.creator_id == users.c.telegram_id).\
+                   where(games.c.status == 'lobby').order_by(games.c.created_at.desc())
+            result = await session.execute(stmt)
+            for row in result.fetchall():
+                live_games.append({
+                    "id": row.id,
+                    "creator_name": row.username or "Player",
+                    "creator_avatar": f"https://i.pravatar.cc/40?u={row.id}",
+                    "stake": float(row.stake),
+                    "prize": float(row.pot * 0.9),
+                })
+    except Exception as e:
+        logger.error(f"Failed to fetch open games from database: {e}")
+        return {"games": []}
+    return {"games": live_games}
 
 @app.get("/health")
 async def health_check():
@@ -104,6 +109,5 @@ async def health_check():
 
 
 # --- 5. Mount Static Files for Web App ---
-# CRITICAL: This line tells FastAPI to serve the files from your 'frontend' folder
-# so the web app can be loaded. It must be at the end.
+# This line tells FastAPI to serve the files from your 'frontend' folder.
 app.mount("/", StaticFiles(directory="frontend"), name="frontend")
