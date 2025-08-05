@@ -114,4 +114,89 @@ async def deposit_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await update.message.reply_text("🔐 Please verify your account to continue.", reply_markup=InlineKeyboardMarkup(otp_button))
         return AWAITING_OTP
 
-async def send_otp_callback(updat
+async def send_otp_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Sends OTP to the user's phone."""
+    query = update.callback_query
+    await query.answer()
+    # TODO: Fetch user's phone from DB
+    phone_number = "0912345678" # Placeholder
+    otp_code = send_otp_sms(phone_number)
+    context.user_data['otp'] = otp_code
+    await query.edit_message_text(text="✅ OTP sent! Please enter the code you received.")
+    return AWAITING_OTP
+
+async def receive_otp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Verifies the OTP."""
+    if update.message.text == context.user_data.get('otp'):
+        # TODO: Update user status to 'verified' in DB
+        context.user_data.clear()
+        await update.message.reply_text("✅ Verification successful! Now, please enter the amount to deposit.")
+        return AWAITING_DEPOSIT_AMOUNT
+    else:
+        await update.message.reply_text("❌ Invalid OTP. Please try again or /cancel.")
+        return AWAITING_OTP
+
+async def receive_deposit_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Initiates Chapa transaction."""
+    user_id = update.effective_user.id
+    try:
+        amount = Decimal(update.message.text)
+        tx_ref = f"yeab-game-{user_id}-{uuid.uuid4()}"
+        checkout_url = initiate_chapa_deposit(user_id, amount, tx_ref)
+        if checkout_url:
+            payment_button = [[InlineKeyboardButton("Click Here to Pay", url=checkout_url)]]
+            await update.message.reply_text(f"To deposit {amount} ETB, please use the button below:", reply_markup=InlineKeyboardMarkup(payment_button))
+        else:
+            await update.message.reply_text("Sorry, we couldn't process your payment right now.")
+        return ConversationHandler.END
+    except (ValueError, TypeError):
+        await update.message.reply_text("Please enter a valid number for the amount.")
+        return AWAITING_DEPOSIT_AMOUNT
+
+async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """A generic cancel handler for all conversations."""
+    await update.message.reply_text("Action cancelled.", reply_markup=REPLY_MARKUP)
+    context.user_data.clear()
+    return ConversationHandler.END
+
+
+# --- 6. Main Setup Function (Combines All Handlers) ---
+def setup_handlers(ptb_app: Application) -> Application:
+    """Attaches all command and conversation handlers to the application."""
+
+    # -- Conversation Handler for Game Creation --
+    play_conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex("^Play 🎮$"), play_start)],
+        states={
+            AWAITING_STAKE: [CallbackQueryHandler(receive_stake, pattern="^stake_")],
+            AWAITING_WIN_CONDITION: [CallbackQueryHandler(receive_win_condition_and_create_game, pattern="^win_")],
+        },
+        fallbacks=[CallbackQueryHandler(cancel_creation, pattern="^cancel_creation")],
+    )
+    
+    # -- Conversation Handler for Registration & Deposit --
+    reg_deposit_conv_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^Register 👤$"), register_start),
+            MessageHandler(filters.Regex("^Deposit 💰$"), deposit_start),
+        ],
+        states={
+            AWAITING_PHONE_FOR_REG: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_phone_for_reg)],
+            AWAITING_OTP: [
+                CallbackQueryHandler(send_otp_callback, pattern="^send_otp$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_otp),
+            ],
+            AWAITING_DEPOSIT_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deposit_amount)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel_conversation)],
+    )
+
+    # Add all handlers to the application
+    ptb_app.add_handler(CommandHandler("start", start_command))
+    ptb_app.add_handler(play_conv_handler)
+    ptb_app.add_handler(reg_deposit_conv_handler)
+    
+    # TODO: Add a CallbackQueryHandler for the "Join Game" button
+    # ptb_app.add_handler(CallbackQueryHandler(join_game_callback, pattern="^join_"))
+
+    return ptb_app
