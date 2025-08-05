@@ -1,117 +1,65 @@
-:root {
-    --bg-color: #1a2233;
-    --card-color: #27344e;
-    --text-color: #ffffff;
-    --text-muted: #a0a0b0;
-    --primary-color: #007bff;
-    --success-color: #28a745;
-}
+/* ... (All the previous styles remain the same) ... */
 
-body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-    padding: 15px;
-    -webkit-font-smoothing: antialiased;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.balance-card {
-    background-color: var(--card-color);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-weight: bold;
-}
-
-.actions button {
-    background-color: var(--card-color);
-    color: var(--text-color);
-    border: none;
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.actions #new-game-btn {
-    background-color: var(--success-color);
-}
-
-.game-list {
-    margin-top: 20px;
-}
-
-.game-card {
-    background-color: var(--card-color);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 10px;
-}
-
-.card-top, .card-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.player-info {
-    display: flex;
-    align-items: center;
-}
-
-.player-info img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 12px;
-}
-
-.player-name {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.game-mode {
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-.game-stats {
-    text-align: right;
-}
-
-.game-stats span {
-    display: block;
-    font-size: 14px;
-    color: var(--text-muted);
-}
-
-.game-stats .prize {
-    color: var(--success-color);
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.card-bottom {
-    margin-top: 15px;
-}
-
-.join-btn {
-    background-color: var(--primary-color);
-    color: white;
+/* NEW: Custom Stake Input Style */
+#custom-stake-input {
     width: 100%;
-    border: none;
+    box-sizing: border-box;
+    margin-top: 15px;
     padding: 12px;
+    background-color: var(--card-color);
+    border: 1px solid var(--bg-color);
     border-radius: 8px;
-    cursor: pointer;
+    color: var(--text-color);
     font-size: 16px;
-    font-weight: bold;
+    text-align: center;
 }
+
+/* NEW: Modal Styles */
+.hidden { display: none !important; }
+
+#confirm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    z-index: 1000;
+}
+
+#confirm-modal {
+    background-color: var(--card-color);
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+    border-radius: 20px 20px 0 0;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h3 { margin: 0; }
+#close-modal-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+
+.summary-card, .prize-card { background-color: var(--bg-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+.summary-card h4 { margin: 0 0 15px 0; }
+.summary-details { display: flex; justify-content: space-between; text-align: center; }
+.detail-item span { color: var(--text-muted); font-size: 14px; display: block; }
+.detail-item strong { font-size: 16px; }
+
+.prize-card { text-align: center; }
+.prize-card h4 { margin: 0; }
+.prize-card p { color: var(--text-muted); margin: 5px 0 10px 0; }
+.prize-card strong { color: var(--success-color); font-size: 24px; }
+
+.modal-actions { display: flex; justify-content: space-between; }
+.modal-actions button { width: 48%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+#cancel-confirm-btn { background-color: #dc3545; color: white; }
+#confirm-create-btn { background-color: var(--primary-color); color: white; }
