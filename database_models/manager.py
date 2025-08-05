@@ -1,4 +1,4 @@
-# /database_models/manager.py (Final, Corrected Version)
+# /database_models/manager.py (Final, Perfected Version with Driver Fix)
 
 import logging
 import os
@@ -7,17 +7,26 @@ from datetime import datetime
 from typing import AsyncGenerator
 
 from dotenv import load_dotenv
-# --- THIS IS THE CRITICAL FIX ---
 from sqlalchemy import (Column, BigInteger, DateTime, ForeignKey, Integer, JSON,
-                        MetaData, Numeric, String, Table) # <-- 'Table' has been re-added to this import.
-# ---------------------------------
+                        MetaData, Numeric, String, Table)
 from sqlalchemy.ext.asyncio import (AsyncSession, create_async_engine)
 from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 load_dotenv()
+
+# --- 1. Get and Correct the Database URL ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# THIS IS THE FINAL, CRITICAL FIX:
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    # SQLAlchemy's async engine needs the URL to specify the 'asyncpg' driver.
+    # We replace the beginning of the URL to ensure the correct driver is used.
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    logger.info("Database URL has been adapted for asyncpg driver.")
+
+
+# --- 2. Database Engine & Metadata ---
 metadata = MetaData()
 
 if not DATABASE_URL:
@@ -30,7 +39,7 @@ else:
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
 
-# --- Table Definitions ---
+# --- 3. Table Definitions (No changes needed) ---
 users = Table(
     "users",
     metadata,
@@ -41,6 +50,7 @@ users = Table(
     Column("balance", Numeric(10, 2), nullable=False, default=0.00),
     Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
 )
+# ... (rest of your tables: games, transactions) ...
 
 games = Table(
     "games",
@@ -72,12 +82,11 @@ transactions = Table(
     Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
 )
 
-# --- Database Session Management ---
+# --- 4. Database Session Management (No changes needed) ---
 @asynccontextmanager
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     if AsyncSessionLocal is None:
-        raise ConnectionError("Database is not configured. Check DATABASE_URL.")
-    
+        raise ConnectionError("Database is not configured.")
     session = AsyncSessionLocal()
     try:
         yield session
@@ -88,19 +97,14 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     finally:
         await session.close()
 
-
-# --- Database Initialization ---
+# --- 5. Database Initialization (No changes needed) ---
 async def init_db():
     if engine is None:
-        logger.error("Cannot initialize database because the engine is not available.")
         return
-        
     async with engine.begin() as conn:
-        logger.info("Creating all tables...")
         await conn.run_sync(metadata.create_all)
         logger.info("Database tables created successfully.")
 
 if __name__ == "__main__":
     import asyncio
-    logger.info("Running database initialization directly...")
     asyncio.run(init_db())
