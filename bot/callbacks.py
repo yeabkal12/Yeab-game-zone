@@ -130,4 +130,47 @@ async def receive_win_condition_and_create_game(update: Update, context: Context
         f"📣 **Game Lobby Created!**\n\n"
         f"👤 **Creator:** {user.first_name}\n"
         f"💰 **Stake:** {stake} ETB\n"
-  
+        f"🏆 **Win Condition:** {win_condition} token(s) home\n\n"
+        f"Waiting for an opponent to join..."
+    )
+
+    await query.edit_message_text(text=lobby_message, reply_markup=inline_markup, parse_mode='Markdown')
+    
+    # Clean up temporary data
+    context.user_data.clear()
+    
+    # End the conversation
+    return ConversationHandler.END
+
+async def cancel_creation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Callback for the 'Cancel' button during game creation.
+    Ends the conversation cleanly.
+    """
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(text="Game creation has been cancelled.")
+    context.user_data.clear()
+    return ConversationHandler.END
+
+# --- 6. Other Callbacks (e.g., for 'Join Game' button) ---
+
+async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handles a player clicking the 'Join Game' button from a lobby message.
+    """
+    query = update.callback_query
+    await query.answer()
+    
+    game_id = query.data.split('_')[1]
+    joining_player = query.from_user
+    logger.info(f"User {joining_player.id} attempting to join game {game_id}.")
+
+    # --- TODO: Full Game Start Logic Goes Here ---
+    # 1. Fetch game details and creator_id from the database using game_id.
+    # 2. Check balances for both players.
+    # 3. Deduct stake from both players.
+    # 4. Update game status to 'active'.
+    # 5. Create the LudoGame instance, render the board, and start the game.
+
+    await query.edit_message_text(text=f"Game {game_id} is starting now!")
