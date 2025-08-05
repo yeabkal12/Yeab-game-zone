@@ -3,23 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Game Lobbies</title>
+    <title>Yeab Game Zone</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="balance-card">
-            💰 0.00
+    <!-- View 1: The Game Lobby -->
+    <div id="lobby-view">
+        <!-- ... (header and game-list are unchanged) ... -->
+    </div>
+
+    <!-- View 2: Create Game Screen -->
+    <div id="create-game-view" class="hidden">
+        <h2>Create a New Game</h2>
+        
+        <div class="setting">
+            <label>Stake Amount (ETB)</label>
+            <div class="options" id="stake-options">
+                <button class="option-btn" data-stake="20">20</button>
+                <button class="option-btn active" data-stake="50">50</button>
+                <button class="option-btn" data-stake="100">100</button>
+            </div>
+            <!-- NEW: Input for custom stake amount -->
+            <input type="number" id="custom-stake-input" placeholder="Or enter a custom amount">
         </div>
-        <div class="actions">
-            <button id="new-game-btn">+ NEW</button>
-            <button id="refresh-btn">🔄</button>
+        
+        <div class="setting">
+            <label>Winning Condition</label>
+            <div class="options" id="win-options">
+                <button class="option-btn" data-win="1">1 Piece</button>
+                <button class="option-btn active" data-win="2">2 Pieces</button>
+                <button class="option-btn" data-win="4">Full House</button>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button id="cancel-create-btn">Cancel</button>
+            <button id="show-confirm-btn">Next</button> <!-- Changed from Create Game -->
         </div>
     </div>
-    
-    <div id="game-list" class="game-list">
-        <p>Loading open games...</p>
+
+    <!-- NEW: Confirmation Modal (Hidden by default) -->
+    <div id="confirm-modal-overlay" class="hidden">
+        <div id="confirm-modal">
+            <div class="modal-header">
+                <h3>Confirm Game</h3>
+                <button id="close-modal-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="summary-card">
+                    <h4>Game Summary</h4>
+                    <div class="summary-details">
+                        <div class="detail-item">
+                            <span>👥 Players</span>
+                            <strong id="summary-players">2</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>💰 Stake</span>
+                            <strong id="summary-stake">50 ETB</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>👑 To Win</span>
+                            <strong id="summary-win">2 Pieces</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="prize-card">
+                    <h4>🏆 Total Prize</h4>
+                    <p>Winner takes all</p>
+                    <strong id="summary-prize">90 ETB</strong>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-confirm-btn">Cancel</button>
+                <button id="confirm-create-btn">Create Game</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>
